@@ -20,36 +20,33 @@ func main() {
 	}
 	defer db.Close()
 
+	articleId := 1000
 	const sqlStr = `
-		select * from articles;
+		select * 
+		from articles
+		where article_id = ?;
 	`
-	rows, err := db.Query(sqlStr)
-	if err != nil {
+	row := db.QueryRow(sqlStr, articleId)
+	if err := row.Err(); err != nil {
+		// データ取得件数が 0 件だった場合は
+		// データ読み出し処理には移らずに終了
 		fmt.Println(err)
 		return
 	}
-	defer rows.Close()
 
-	// / models.Article 型のスライスを初期化します。これはデータベースから取得した記事を格納するために使用します。
-	articleArray := make([]models.Article, 0) // スライスの初期長さは0です。つまり、スライスは空（要素を持たない）状態で作成されます。
-	// データベースのクエリ結果を行単位で処理します。
-	for rows.Next() {
-		var article models.Article
-		var createdTime sql.NullTime
-		// rows.Scan で各列のデータを article 変数に読み込みます。
-		err := rows.Scan(&article.ID, &article.Title, &article.Contents, &article.UserName, &article.NiceNum, &createdTime)
+	var article models.Article
+	var createdTime sql.NullTime
+	// rows.Scan で各列のデータを article 変数に読み込みます。
+	err = row.Scan(&article.ID, &article.Title, &article.Contents, &article.UserName, &article.NiceNum, &createdTime)
 
-		if createdTime.Valid {
-			article.CreatedAt = createdTime.Time
-		}
-
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			// エラーがなければ、article 変数を articleArray スライスに追加します。
-			articleArray = append(articleArray, article)
-		}
+	if err != nil {
+		fmt.Println(err)
 	}
 
-	fmt.Printf("%+v\n", articleArray)
+	if createdTime.Valid {
+		article.CreatedAt = createdTime.Time
+	}
+
+	fmt.Printf("%+v\n", article)
+
 }
